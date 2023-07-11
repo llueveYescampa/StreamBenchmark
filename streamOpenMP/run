@@ -1,0 +1,44 @@
+#!/bin/bash
+if [ "$#" -lt 1 ]
+then
+  echo "Usage: $0 compilerName"
+  exit 1
+fi
+
+compiler=$1
+
+npt=`grep -c ^processor /proc/cpuinfo`
+numaNodes=`lscpu | grep "NUMA node(s):" | awk '{}{print $3}{}'`
+tpc=`lscpu | grep "Thread(s) per core:" | awk '{}{print $4}{}'`
+np="$(($npt / $tpc))"
+npps="$(($np / $numaNodes))"
+npm1="$(($np - 1))"
+
+echo $compiler "Compiler"
+export OMP_DISPLAY_ENV=true
+export OMP_PROC_BIND=spread
+export OMP_SCHEDULE=static
+#export OMP_PLACES=sockets
+export OMP_PLACES=cores
+export OMP_DISPLAY_AFFINITY=true
+#export OMP_AFFINITY_FORMAT='Affinity %A'
+
+rm -f temp.txt
+for i in 1 `seq 2 1 $np`; do
+    echo number of threads: $i
+    export OMP_NUM_THREADS=$i
+    ./streamOpenMP >> temp.txt
+done
+
+
+mkdir -p ../../plots/$(hostname)/$compiler
+
+cat temp.txt | grep "Copy:\|counted" | awk ' BEGIN {i=0;j=0}   { if ($4 == "counted") np[i++]=$6;  if ($1 == "Copy:")rate[j++]=$2;}   END {for (j=0; j<i; ++j) printf("%d %.1f\n",  np[j], rate[j])}' > ../../plots/$(hostname)/$compiler/streamOpenMP_Copy.dat
+
+cat temp.txt | grep "Scale:\|counted" | awk ' BEGIN {i=0;j=0}   { if ($4 == "counted") np[i++]=$6;  if ($1 == "Scale:")rate[j++]=$2;}   END {for (j=0; j<i; ++j) printf("%d %.1f\n",  np[j], rate[j])}' > ../../plots/$(hostname)/$compiler/streamOpenMP_Scale.dat
+
+cat temp.txt | grep "Add:\|counted" | awk ' BEGIN {i=0;j=0}   { if ($4 == "counted") np[i++]=$6;  if ($1 == "Add:")rate[j++]=$2;}   END {for (j=0; j<i; ++j) printf("%d %.1f\n",  np[j], rate[j])}' > ../../plots/$(hostname)/$compiler/streamOpenMP_Add.dat
+
+cat temp.txt | grep "Triad:\|counted" | awk ' BEGIN {i=0;j=0}   { if ($4 == "counted") np[i++]=$6;  if ($1 == "Triad:")rate[j++]=$2;}   END {for (j=0; j<i; ++j) printf("%d %.1f\n",  np[j], rate[j])}' > ../../plots/$(hostname)/$compiler/streamOpenMP_Triad.dat
+
+rm temp.txt
