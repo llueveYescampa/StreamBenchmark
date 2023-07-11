@@ -1,0 +1,39 @@
+#!/usr/bin/gnuplot
+# call it as:
+# gnuplot -c plot.gnp stout
+#
+machine=ARG1
+test=ARG2
+
+set terminal pdf enhanced
+set output machine."-".test."Ratio.pdf"
+
+#plotTitle=machine."-".test
+plotTitle=test." Test in ".machine
+
+
+set style line 1 dt 1 ps 0.6 lc rgb "#ff0000";
+set style line 2 dt 4 ps 0.5 lc rgb "#ff4f00";
+
+set style line 3 dt 1 ps 0.6 lc rgb "#0000ff";
+set style line 4 dt 4 ps 0.5 lc rgb "#0099ff";
+
+set style line 5 dt 1 ps 0.6 lc rgb "#00ff00";
+set style line 6 dt 4 ps 0.5 lc rgb "#00ff99";
+
+set key bottom right nobox
+set grid
+
+set xlabel "Number of Processors/Threads"
+set ylabel "Rate MB/s"
+set xrange [0:]
+set xtics 1
+set yrange [0:]
+     
+set title "Stream Benchmark"
+set label plotTitle." - MPI\_{sm} to OpenMP Ratio" at graph 0.5, 1.035 center font "Arial,11"
+
+plot machine.'/Gnu/result.txt'   using 1:($2/$4) title "Gnu Compiler"   with linespoints ls 1,\
+     machine.'/Intel/result.txt' using 1:($2/$4) title "Intel Compiler" with linespoints ls 3,\
+     machine.'/Pgi/result.txt'   using 1:($2/$4) title "Pgi Compiler"     with linespoints ls 5 
+     
